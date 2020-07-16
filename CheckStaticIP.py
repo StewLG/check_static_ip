@@ -49,27 +49,60 @@ def GetIPAddress_IP4OnlyDotMe():
         response = requests.get(IPV4_CHECK_URL);
     except:
         # Site wasn't there, internet is totally down, etc.
-        #print (f'CRITICAL - Problem when when trying to retrieve URL {IPV4_CHECK_URL}. Exception: {sys.exc_info()}')
-        #sys.exit(2);
         return f"Error retrieving {IPV4_CHECK_URL}"
 
     # Site isn't working properly, URL changed, etc.
     if (response.status_code != requests.codes.ok):
-        #print (f'CRITICAL - Received status code {response.status_code} when trying to retrieve URL {IPV4_CHECK_URL}')
-        #sys.exit(2);
         return f"Error retrieving {IPV4_CHECK_URL}, status code: {response.status_code}"
-        
+
     ipAddressLine = response.text;
-    #print ("Result: "+ ipAddressLine);
-    
+
     # We expect commas in the output from the web site
     if ("," not in ipAddressLine):
-        #print (f'CRITICAL - Got unparsable response {ipAddressLine} from {IPV4_CHECK_URL}')
-        #sys.exit(2);
         return f"Got unparsable response {ipAddressLine} from {IPV4_CHECK_URL}"
     
     ipAddress = ipAddressLine.split(',')[1]; 
     return ipAddress;
+
+
+# http://ipv4bot.whatismyipaddress.com/
+WHAT_IS_MY_IP_ADDRESS_CHECK_URL = "http://ipv4bot.whatismyipaddress.com/";
+
+def GetIPAddress_WhatIsMyIPAddressDotCom():
+    try:
+        response = requests.get(WHAT_IS_MY_IP_ADDRESS_CHECK_URL);
+    except:
+        # Site wasn't there, internet is totally down, etc.
+        return f"Error retrieving {WHAT_IS_MY_IP_ADDRESS_CHECK_URL}"
+
+    # Site isn't working properly, URL changed, etc.
+    if (response.status_code != requests.codes.ok):
+        return f"Error retrieving {WHAT_IS_MY_IP_ADDRESS_CHECK_URL}, status code: {response.status_code}"
+
+    # This service is simple, no CSV or JSON - just the raw IP address
+    ipAddress = response.text;
+ 
+    return ipAddress;
+    
+# https://api.ipify.org
+IPIFY_CHECK_URL = "https://api.ipify.org";
+
+def GetIPAddress_IPify():
+    try:
+        response = requests.get(IPIFY_CHECK_URL);
+    except:
+        # Site wasn't there, internet is totally down, etc.
+        return f"Error retrieving {IPIFY_CHECK_URL}"
+
+    # Site isn't working properly, URL changed, etc.
+    if (response.status_code != requests.codes.ok):
+        return f"Error retrieving {IPIFY_CHECK_URL}, status code: {response.status_code}"
+
+    # This service supports JSON etc, but the simple version with just the IP is fine.
+    ipAddress = response.text;
+
+    return ipAddress;
+
 
 
 def AddResultsAndAnyErrors(expectedIP4Address, resultString):
@@ -81,6 +114,8 @@ def AddResultsAndAnyErrors(expectedIP4Address, resultString):
 def CheckAllExternalIPV4Providers(expectedIP4Address):
 
     AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IP4OnlyDotMe())
+    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_WhatIsMyIPAddressDotCom())
+    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IPify())
 
     # Did at least one service match our expected IP address?
     atLeastOnePositiveResult = any(AllResults);
@@ -93,7 +128,7 @@ def CheckAllExternalIPV4Providers(expectedIP4Address):
     print(f"ErrorMessages: {ErrorMessages}")
     
     if (atLeastOnePositiveResult):
-        print (f'OK - External IP address appears to be {expectedIP4Address} as expected, {totalServicesSucceeded}/{totalServicesChecked} IP address service succeeded.')
+        print (f'OK - External IP address appears to be {expectedIP4Address} as expected, {totalServicesSucceeded}/{totalServicesChecked} IP address services succeeded.')
         sys.exit(0)
     
     # No matching results? Indicate failure and print out errors for debugging.
