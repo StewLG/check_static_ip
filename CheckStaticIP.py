@@ -2,6 +2,8 @@
 
 # Copyright (c) 2020 Stewart Loving-Gibbard
 
+# https://github.com/StewLG/check_static_ip
+
 '''
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,7 +34,7 @@ def SetupParser():
     # Build parser for arguments
     parser = argparse.ArgumentParser(description='Checks to make sure that external IP V4 address is still an expected IP address')
     parser.add_argument('-eip', '--expectedip', required=True, type=str, help='Expected IPV4 address')
-    #parser.add_argument('-d', '--debug', required=False, action='store_true', help='Display debugging information; run script this way and record result when asking for help.')
+    parser.add_argument('-d', '--debug', required=False, action='store_true', help='Display debugging information; run script this way and record result when asking for help.')
     return parser;
 
 def ExitIfNoArguments(parser):
@@ -42,7 +44,7 @@ def ExitIfNoArguments(parser):
         sys.exit(1)
 
 # IP4Only
-IPV4_CHECK_URL = "http://ip4only.me/api/";
+IPV4_CHECK_URL = "http://ip4only.me/api";
 
 def GetIPAddress_IP4OnlyDotMe():
     try:
@@ -66,7 +68,7 @@ def GetIPAddress_IP4OnlyDotMe():
 
 
 # http://ipv4bot.whatismyipaddress.com/
-WHAT_IS_MY_IP_ADDRESS_CHECK_URL = "http://ipv4bot.whatismyipaddress.com/";
+WHAT_IS_MY_IP_ADDRESS_CHECK_URL = "http://ipv4bot.whatismyipaddress.com";
 
 def GetIPAddress_WhatIsMyIPAddressDotCom():
     try:
@@ -104,14 +106,13 @@ def GetIPAddress_IPify():
     return ipAddress;
 
 
-
 def AddResultsAndAnyErrors(expectedIP4Address, resultString):
     currentResult = resultString == expectedIP4Address;
     AllResults.append(currentResult);
     if (not currentResult):
         ErrorMessages.append(resultString);
 
-def CheckAllExternalIPV4Providers(expectedIP4Address):
+def CheckAllExternalIPV4Providers(expectedIP4Address, shouldShowDebugInfo):
 
     AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IP4OnlyDotMe())
     AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_WhatIsMyIPAddressDotCom())
@@ -123,9 +124,10 @@ def CheckAllExternalIPV4Providers(expectedIP4Address):
     totalServicesChecked = len(AllResults);
     # How many services succeeded?
     totalServicesSucceeded = AllResults.count(True);
-    
-    print(f"AllResults: {AllResults}")
-    print(f"ErrorMessages: {ErrorMessages}")
+
+    if (shouldShowDebugInfo):
+        print(f"AllResults: {AllResults}")
+        print(f"ErrorMessages: {ErrorMessages}")
     
     if (atLeastOnePositiveResult):
         print (f'OK - External IP address appears to be {expectedIP4Address} as expected, {totalServicesSucceeded}/{totalServicesChecked} IP address services succeeded.')
@@ -133,7 +135,7 @@ def CheckAllExternalIPV4Providers(expectedIP4Address):
     
     # No matching results? Indicate failure and print out errors for debugging.
     if (not atLeastOnePositiveResult):
-        print (f'CRITICAL - Expected {expectedIP4Address}, but got following mismatching addresses or errors from IP Address services: {ErrorMessages}');
+        print (f'CRITICAL - Expected {expectedIP4Address}, but none matched. Got following mismatching addresses or errors from IP Address services: {ErrorMessages}');
         sys.exit(2);
 
 
@@ -148,7 +150,7 @@ def main():
     args = parser.parse_args(sys.argv[1:])
     
     # Check the static IPV4
-    CheckAllExternalIPV4Providers(args.expectedip);
+    CheckAllExternalIPV4Providers(args.expectedip, args.debug);
 
 if __name__ == '__main__':
     main()
