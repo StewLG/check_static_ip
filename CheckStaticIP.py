@@ -22,8 +22,11 @@ import sys
 import string
 import requests
 
-# Thanks kindly to whoever made this
-IPV4_CHECK_URL = "http://ip4only.me/api/";
+
+# The true/false result of every service checked. If True, the IP address matched the expected one.
+AllResults = []
+# Only error messages/problems retrieving values.
+ErrorMessages = []
 
 def SetupParser():
     # Build parser for arguments
@@ -38,35 +41,66 @@ def ExitIfNoArguments(parser):
         parser.print_help(sys.stderr)
         sys.exit(1)
 
-def CheckIPV4StaticIP(expectedIP4Address):
+# IP4Only
+IPV4_CHECK_URL = "http://ip4only.me/api/";
+
+def GetIPAddress_IP4OnlyDotMe():
     try:
         response = requests.get(IPV4_CHECK_URL);
     except:
         # Site wasn't there, internet is totally down, etc.
-        print (f'CRITICAL - Problem when when trying to retrieve URL {IPV4_CHECK_URL}. Exception: {sys.exc_info()}')
-        sys.exit(2);
+        #print (f'CRITICAL - Problem when when trying to retrieve URL {IPV4_CHECK_URL}. Exception: {sys.exc_info()}')
+        #sys.exit(2);
+        return f"Error retrieving {IPV4_CHECK_URL}"
 
     # Site isn't working properly, URL changed, etc.
     if (response.status_code != requests.codes.ok):
-        print (f'CRITICAL - Received status code {response.status_code} when trying to retrieve URL {IPV4_CHECK_URL}')
-        sys.exit(2);
-
+        #print (f'CRITICAL - Received status code {response.status_code} when trying to retrieve URL {IPV4_CHECK_URL}')
+        #sys.exit(2);
+        return f"Error retrieving {IPV4_CHECK_URL}, status code: {response.status_code}"
+        
     ipAddressLine = response.text;
     #print ("Result: "+ ipAddressLine);
     
     # We expect commas in the output from the web site
     if ("," not in ipAddressLine):
-        print (f'CRITICAL - Got unparsable response {ipAddressLine} from {IPV4_CHECK_URL}')
-        sys.exit(2);
+        #print (f'CRITICAL - Got unparsable response {ipAddressLine} from {IPV4_CHECK_URL}')
+        #sys.exit(2);
+        return f"Got unparsable response {ipAddressLine} from {IPV4_CHECK_URL}"
     
-    ipAddress = ipAddressLine.split(',')[1];
-    #print ("IPv4: "+ ipAddress);
-    if (ipAddress == expectedIP4Address):
-        print (f'OK - External IP address appears to be {expectedIP4Address} as expected.')
+    ipAddress = ipAddressLine.split(',')[1]; 
+    return ipAddress;
+
+
+def AddResultsAndAnyErrors(expectedIP4Address, resultString):
+    currentResult = resultString == expectedIP4Address;
+    AllResults.append(currentResult);
+    if (not currentResult):
+        ErrorMessages.append(resultString);
+
+def CheckAllExternalIPV4Providers(expectedIP4Address):
+
+    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IP4OnlyDotMe())
+
+    # Did at least one service match our expected IP address?
+    atLeastOnePositiveResult = any(AllResults);
+    # How many services did we check?
+    totalServicesChecked = len(AllResults);
+    # How many services succeeded?
+    totalServicesSucceeded = AllResults.count(True);
+    
+    print(f"AllResults: {AllResults}")
+    print(f"ErrorMessages: {ErrorMessages}")
+    
+    if (atLeastOnePositiveResult):
+        print (f'OK - External IP address appears to be {expectedIP4Address} as expected, {totalServicesSucceeded}/{totalServicesChecked} IP address service succeeded.')
         sys.exit(0)
-    else:
-        print (f'CRITICAL - IP Address was {ipAddress}, not {expectedIP4Address} as expected!')
-        sys.exit(2)
+    
+    # No matching results? Indicate failure and print out errors for debugging.
+    if (not atLeastOnePositiveResult):
+        print (f'CRITICAL - Expected {expectedIP4Address}, but got following mismatching addresses or errors from IP Address services: {ErrorMessages}');
+        sys.exit(2);
+
 
 def main():
     # Build parser for arguments
@@ -79,7 +113,7 @@ def main():
     args = parser.parse_args(sys.argv[1:])
     
     # Check the static IPV4
-    CheckIPV4StaticIP(args.expectedip);
+    CheckAllExternalIPV4Providers(args.expectedip);
 
 if __name__ == '__main__':
     main()
