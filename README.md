@@ -1,5 +1,5 @@
 # check_static_ip
-Nagios check for external IPV4 static IP address.
+Nagios check for external IPV4 static IP address. Version 1.1.
 
 The check calls distinct separate free services to determine the external IP Address. If at least ONE matches,
 the check succeeds. 
