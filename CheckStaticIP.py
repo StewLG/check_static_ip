@@ -4,7 +4,7 @@
 
 # https://github.com/StewLG/check_static_ip
 
-# Version 1.1
+# Version 1.11
 
 '''
 This program is free software: you can redistribute it and/or modify
@@ -37,6 +37,7 @@ def SetupParser():
     parser = argparse.ArgumentParser(description='Checks to make sure that external IP V4 address is still an expected IP address')
     parser.add_argument('-eip', '--expectedip', required=True, type=str, help='Expected IPV4 address')
     parser.add_argument('-d', '--debug', required=False, action='store_true', help='Display debugging information; run script this way and record result when asking for help.')
+    parser.add_argument('-t', '--timeout', required=False, type=int, help='Timeout in seconds. This is the maximum amount of time in seconds to wait for any particular IP address service. If set to 10 the check will wait up to 10 second per service. If set to 0 the check will wait indefinitely - this is the default.')
     return parser;
 
 def ExitIfNoArguments(parser):
@@ -48,9 +49,11 @@ def ExitIfNoArguments(parser):
 # IP4Only
 IPV4_CHECK_URL = "http://ip4only.me/api";
 
-def GetIPAddress_IP4OnlyDotMe():
+def GetIPAddress_IP4OnlyDotMe(timeoutInSeconds, shouldShowDebugInfo):
     try:
-        response = requests.get(IPV4_CHECK_URL);
+        if (shouldShowDebugInfo):
+            print (f"Fetching from {IPV4_CHECK_URL}")
+        response = requests.get(IPV4_CHECK_URL, timeout=timeoutInSeconds);
     except:
         # Site wasn't there, internet is totally down, etc.
         return f"Error retrieving {IPV4_CHECK_URL}"
@@ -72,9 +75,11 @@ def GetIPAddress_IP4OnlyDotMe():
 # http://ipv4bot.whatismyipaddress.com/
 WHAT_IS_MY_IP_ADDRESS_CHECK_URL = "http://ipv4bot.whatismyipaddress.com";
 
-def GetIPAddress_WhatIsMyIPAddressDotCom():
+def GetIPAddress_WhatIsMyIPAddressDotCom(timeoutInSeconds, shouldShowDebugInfo):
     try:
-        response = requests.get(WHAT_IS_MY_IP_ADDRESS_CHECK_URL);
+        if (shouldShowDebugInfo):
+            print (f"Fetching from {WHAT_IS_MY_IP_ADDRESS_CHECK_URL}")
+        response = requests.get(WHAT_IS_MY_IP_ADDRESS_CHECK_URL, timeout=timeoutInSeconds);
     except:
         # Site wasn't there, internet is totally down, etc.
         return f"Error retrieving {WHAT_IS_MY_IP_ADDRESS_CHECK_URL}"
@@ -91,9 +96,11 @@ def GetIPAddress_WhatIsMyIPAddressDotCom():
 # https://api.ipify.org
 IPIFY_CHECK_URL = "https://api.ipify.org";
 
-def GetIPAddress_IPify():
+def GetIPAddress_IPify(timeoutInSeconds, shouldShowDebugInfo):
     try:
-        response = requests.get(IPIFY_CHECK_URL);
+        if (shouldShowDebugInfo):
+            print (f"Fetching from {IPIFY_CHECK_URL}")
+        response = requests.get(IPIFY_CHECK_URL, timeout=timeoutInSeconds);
     except:
         # Site wasn't there, internet is totally down, etc.
         return f"Error retrieving {IPIFY_CHECK_URL}"
@@ -107,18 +114,17 @@ def GetIPAddress_IPify():
 
     return ipAddress;
 
-
 def AddResultsAndAnyErrors(expectedIP4Address, resultString):
     currentResult = resultString == expectedIP4Address;
     AllResults.append(currentResult);
     if (not currentResult):
         ErrorMessages.append(resultString);
 
-def CheckAllExternalIPV4Providers(expectedIP4Address, shouldShowDebugInfo):
+def CheckAllExternalIPV4Providers(expectedIP4Address, timeoutInSeconds, shouldShowDebugInfo):
 
-    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IP4OnlyDotMe())
-    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_WhatIsMyIPAddressDotCom())
-    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IPify())
+    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IP4OnlyDotMe(timeoutInSeconds, shouldShowDebugInfo))
+    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_WhatIsMyIPAddressDotCom(timeoutInSeconds, shouldShowDebugInfo))
+    AddResultsAndAnyErrors(expectedIP4Address, GetIPAddress_IPify(timeoutInSeconds, shouldShowDebugInfo))
 
     # Did at least one service match our expected IP address?
     atLeastOnePositiveResult = any(AllResults);
@@ -152,7 +158,7 @@ def main():
     args = parser.parse_args(sys.argv[1:])
     
     # Check the static IPV4
-    CheckAllExternalIPV4Providers(args.expectedip, args.debug);
+    CheckAllExternalIPV4Providers(args.expectedip, args.timeout, args.debug);
 
 if __name__ == '__main__':
     main()
