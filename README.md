@@ -1,5 +1,5 @@
 # check_static_ip
-Nagios check for external IPV4 static IP address. Version 1.1.
+Nagios check for external IPV4 static IP address. Version 1.2.
 
 The check calls distinct separate free services to determine the external IP Address. If at least ONE matches,
 the check succeeds. 
@@ -36,5 +36,24 @@ AllResults: [False, True, True]
 ErrorMessages: ['Error retrieving http://ip4only.me/api, status code: 404']
 OK - External IP address appears to be 11.22.33.44 as expected, 2/3 IP address services succeeded.
 ```
+
+## If checks are taking too long, try using --timeout flag
+
+No timeout parameter, one service unresponsive:
+```
+python CheckStaticIP.py --expectedip 11.22.33.44
+CRITICAL - Expected 11.22.33.44, but none matched. Got following mismatching addresses or errors from IP Address services: ['Error retrieving http://ip4only.me/api, status code: 5
+03', '66.111.222.333', '66.111.222.333']. Elapsed time: 61.49 seconds.
+```
+
+Timeout parameter of 5 seconds per service:
+```
+python CheckStaticIP.py --expectedip 11.22.33.44
+CRITICAL - Expected 11.22.33.44, but none matched. Got following mismatching addresses or errors from IP Address services: ['Error retrieving http://ip4only.me/api, status code: 5
+03', '66.111.222.333', '66.111.222.333']. Elapsed time: 5.47 seconds.
+```
+
+Here we get to the same failed status quicker, in about 5.5 seconds vs. 61.5 seconds. Also add --debug to watch checks occur in real time.
+
 
 Suggestions for additional free IPV4 IP address APIs gladly taken.
